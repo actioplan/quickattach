@@ -14,7 +14,7 @@ from zim.plugins import PluginClass
 from zim.actions import action
 from zim.config import data_file, ConfigManager
 from zim.notebook import Path, Notebook, NotebookInfo, \
-	resolve_notebook, build_notebook
+	resolve_notebook, build_notebook, get_notebook_list
 from zim.templates import get_template
 from zim.main import GtkCommand, ZIM_APPLICATION
 
@@ -36,10 +36,11 @@ usage: zim --plugin quickattach [OPTIONS]
 
 Options:
   --help, -h             Print this help text and exit
-  --notebook URI         Select the notebook in the dialog
-  --namespace URI        Input of real name
-  --basename STRING      Take the value as basename
-  --attachments FOLDER   Import all files in FOLDER as attachments,
+  --notebook= URI         Select the notebook in the dialog
+  --namespace= URI        Input of real name
+  --basename= STRING      Take the value as basename
+  --attachments= FOLDER   Import all files in FOLDER as attachments,
+  --remove                If added, the attachments will be removed from the origin directory
   --journal              Determines the namespace and basename from todays date (inserts at the today journal entry...)
 '''
 
@@ -50,9 +51,8 @@ class QuickAttachPluginCommand(GtkCommand):
 		('help', 'h', 'Print this help text and exit'),
 		('notebook=', '', 'Select the corresponding notebook'),
 		('namespace=', '', 'Take the value as name for the page'), 
-		('basename=', '', 'Take the value as basename for the page'),
+		('basename=', '', 'Take the value as basename for the page. The page reference is composed by basename + ":" + namespace'),
 		('attachments=', '', 'Import all files in FOLDER as attachments, wiki input can refer these files relatively'),
-		('journal', '', 'Construct namespace and basename out from todays date, in the logic corresponding to the Journal plugin'),
 		('remove','','Removes the attachments from the attachments folder')
 	)
 
@@ -93,8 +93,10 @@ class QuickAttachPluginCommand(GtkCommand):
 	def my_run(self):
 		if 'notebook' in self.opts:
 			notebook = resolve_notebook(self.opts['notebook'])
+		elif len(get_notebook_list()) == 0:
+			exit()
 		else:
-			notebook = None
+			notebook = (get_notebook_list())[0]
 
 		notebook, x = build_notebook(LocalFolder(notebook.uri))
 
@@ -102,7 +104,7 @@ class QuickAttachPluginCommand(GtkCommand):
 		attachments=self.opts.get('attachments')
 		basename=self.opts.get('basename')
 		
-		if 'journal' in self.opts:
+		if namespace is None and basename is None: 
 			path = 'Journal:' + self.today_as_path()
 			basename = self.today_as_path()
 		elif namespace is not None and basename is not None:
